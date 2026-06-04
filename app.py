@@ -66,7 +66,7 @@ if uploaded_file is not None:
 
     st.write("Enter the lease details below.")
 
-    left_col, right_col = st.columns([2, 2])
+    left_col, right_col = st.columns(2)
 
     with left_col:
 
@@ -177,30 +177,63 @@ if uploaded_file is not None:
     if selected_deals.empty:
         st.error("No deals available with selected filters.")
     else:
-        st.subheader("Top deals")
-        sort_order = st.radio(
-            "Sort by:",
-            [
-                'Monthly payment (Low->High)',
-                "Monthly payment over list price (Low->High)",
-                "Total payment over list price (Low->High)",
-                "Total payment over depreciation (Low->High)",
-                "**Monthly payment over PCP** (Low->High)"
-            ]
-        )
-        if sort_order == "Monthly payment (Low->High)":
-            data_for_display = selected_deals.sort_values("monthly_payment")[display_columns]
-        elif sort_order == "Monthly payment over list price (Low->High)":
-            data_for_display = selected_deals.sort_values("monthly_payment_over_price_new_inc_vat")[display_columns]
-        elif sort_order == "Total payment over list price (Low->High)":
-            data_for_display = selected_deals.sort_values("total_payment_over_list_price")[display_columns]
-        elif sort_order == "Total payment over depreciation (Low->High)":
-            data_for_display = selected_deals.sort_values("total_payment_over_depreciation")[display_columns]
-        else:
-            data_for_display = selected_deals.sort_values('leasing_monthly_over_PCP')[display_columns]
 
-        st.dataframe(
-            data_for_display.head(100),
-            hide_index=True,
-            width='stretch',
-        )
+        order_specifications = {
+            'Monthly payment (Low->High)':{'col':'monthly_payment', 'ascending':True},
+            "Monthly payment over list price (Low->High)":{'col':'monthly_payment_over_price_new_inc_vat', 'ascending':True},
+            "Total payment over list price (Low->High)":{'col':'total_payment_over_list_price', 'ascending':True},
+            "Total payment over depreciation (Low->High)":{'col':'total_payment_over_depreciation', 'ascending':True},
+            "**Monthly payment over PCP** (Low->High)":{'col':'leasing_monthly_over_PCP', 'ascending':True},
+        }
+
+        st.subheader("Sort order comparison\n Select two sort orders to compare top results")
+        N = st.number_input("Number of results to display:", min_value=10, max_value=100, step=10, value=10)
+        ref_order_section, alternative_order_section = st.columns(2)
+        with ref_order_section:
+            ref_order = st.radio(
+                "Reference Order",
+                list(order_specifications.keys()),
+                index=1,
+            )
+
+            order_spec = order_specifications[ref_order]
+            data_sorted_ref = selected_deals.sort_values(order_spec['col'], ascending=order_spec['ascending'])
+
+            st.dataframe(
+                data_sorted_ref[display_columns].head(N),
+                hide_index=True,
+                width='stretch',
+            )
+
+            # calculate stats
+            st.write('Summary stats for reference order:')
+            # calculate stats
+            st.dataframe(
+                data_sorted_ref[['monthly_payment', 'deposit_amount', 'total_payment', 'PCP_monthly','leasing_monthly_over_PCP',]].head(N).describe(),
+                hide_index=False,
+                width='stretch',
+            )
+
+        with alternative_order_section:
+            alternative_order = st.radio(
+                "Alternative Order",
+                list(order_specifications.keys()),
+                index=4
+            )
+
+            order_spec = order_specifications[alternative_order]
+            data_sorted_alternative = selected_deals.sort_values(order_spec['col'], ascending=order_spec['ascending'])
+
+            st.dataframe(
+                data_sorted_alternative[display_columns].head(N),
+                hide_index=True,
+                width='stretch',
+            )
+
+            # calculate stats
+            st.write('Summary stats for alternative order:')
+            st.dataframe(
+                data_sorted_alternative[['monthly_payment', 'deposit_amount', 'total_payment', 'PCP_monthly', 'leasing_monthly_over_PCP',]].head(N).describe(),
+                hide_index=False,
+                width='stretch',
+            )
